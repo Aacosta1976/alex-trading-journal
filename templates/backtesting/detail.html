@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}{{ bt.name }} — Backtest{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="text-gold mb-0"><i class="bi bi-bar-chart me-2"></i>{{ bt.name }}</h4>
+  <a href="{% url 'backtesting:list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Volver
+  </a>
+</div>
+
+<!-- Info del backtest -->
+<div class="card mb-3 p-3">
+  <div class="row g-3 text-center">
+    <div class="col-6 col-md-2"><small class="text-subtle d-block">Símbolo</small><span class="text-gold fw-bold">{{ bt.symbol }}</span></div>
+    <div class="col-6 col-md-2"><small class="text-subtle d-block">Setup</small><span class="text-purple">{{ bt.setup|default:"Todos" }}</span></div>
+    <div class="col-6 col-md-2"><small class="text-subtle d-block">Período</small><span class="small">{{ bt.date_from }} → {{ bt.date_to }}</span></div>
+    <div class="col-6 col-md-2"><small class="text-subtle d-block">Balance inicial</small><span class="text-cyan">${{ bt.initial_balance }}</span></div>
+    <div class="col-6 col-md-2"><small class="text-subtle d-block">Riesgo/trade</small><span class="text-cyan">{{ bt.risk_pct }}%</span></div>
+    <div class="col-6 col-md-2"><small class="text-subtle d-block">Trades analizados</small><span class="text-gold">{{ metrics.total_trades }}</span></div>
+  </div>
+</div>
+
+<!-- KPIs -->
+{% if metrics %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card kpi-card p-3">
+      <div class="kpi-label">P&L SIMULADO</div>
+      <div class="kpi-value {% if metrics.gross_pnl >= 0 %}text-green{% else %}text-red{% endif %}">
+        ${{ metrics.gross_pnl|floatformat:2 }}
+      </div>
+      <small class="text-subtle">ROE: {{ metrics.roe|floatformat:2 }}%</small>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card kpi-card p-3" style="border-left-color:var(--cyan)">
+      <div class="kpi-label">WIN RATE</div>
+      <div class="kpi-value text-cyan">{{ metrics.win_rate|floatformat:1 }}%</div>
+      <small class="text-subtle">{{ metrics.total_wins }}W / {{ metrics.total_losses }}L</small>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card kpi-card p-3" style="border-left-color:var(--purple)">
+      <div class="kpi-label">PROFIT FACTOR</div>
+      <div class="kpi-value text-purple">{{ metrics.profit_factor|floatformat:2 }}×</div>
+      <small class="text-subtle">Avg R:R: {{ metrics.avg_rr|floatformat:2 }}R</small>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card kpi-card p-3" style="border-left-color:var(--red)">
+      <div class="kpi-label">MAX DRAWDOWN</div>
+      <div class="kpi-value text-red">{{ metrics.max_drawdown_pct|floatformat:1 }}%</div>
+      <small class="text-subtle">Sharpe: {{ metrics.sharpe_ratio|floatformat:2 }}</small>
+    </div>
+  </div>
+</div>
+
+<!-- Gráficos -->
+<div class="row g-3 mb-4">
+  <div class="col-md-8">
+    <div class="card p-3">
+      <h6 class="text-cyan mb-2">Equity Curve Simulada</h6>
+      <div style="height:220px"><canvas id="chartEq"></canvas></div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3">
+      <h6 class="text-gold mb-2">P&L Mensual</h6>
+      <div style="height:220px"><canvas id="chartMon"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabla mensual -->
+{% if monthly %}
+<div class="card">
+  <div class="card-header py-2"><span class="text-gold fw-bold small">DESGLOSE MENSUAL</span></div>
+  <div class="table-responsive">
+    <table class="table table-striped mb-0">
+      <thead><tr>
+        <th>Mes</th><th>Trades</th><th>Wins</th><th>Losses</th><th>Win Rate</th><th>P&L ($)</th>
+      </tr></thead>
+      <tbody>
+        {% for m in monthly %}
+        <tr>
+          <td class="text-subtle">{{ m.month }}</td>
+          <td>{{ m.total }}</td>
+          <td class="text-green">{{ m.wins }}</td>
+          <td class="text-red">{{ m.losses }}</td>
+          <td class="{% if m.win_rate >= 60 %}text-green{% elif m.win_rate < 40 %}text-red{% else %}text-orange{% endif %}">
+            {{ m.win_rate }}%
+          </td>
+          <td class="fw-bold {% if m.pnl >= 0 %}text-green{% else %}text-red{% endif %}">
+            ${{ m.pnl|floatformat:2 }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if charts_json %}
+<script>
+const D = {{ charts_json|safe }};
+Chart.defaults.color = '#8B949E';
+Chart.defaults.borderColor = '#30363D';
+
+new Chart('chartEq', {
+  type: 'line',
+  data: {
+    labels: D.eq_labels,
+    datasets: [
+      { label:'Balance ($)', data:D.eq_balance, borderColor:'#3FB950', backgroundColor:'rgba(63,185,80,.1)', fill:true, tension:.3, pointRadius:2 },
+      { label:'Drawdown (%)', data:D.eq_dd, borderColor:'#F85149', backgroundColor:'rgba(248,81,73,.05)', fill:true, tension:.3, pointRadius:1, yAxisID:'y2' }
+    ]
+  },
+  options:{ responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ position:'bottom', labels:{ boxWidth:12 } } },
+    scales:{ y:{ grid:{ color:'#30363D' } }, y2:{ position:'right', grid:{ drawOnChartArea:false } } }
+  }
+});
+
+new Chart('chartMon', {
+  type: 'bar',
+  data: {
+    labels: D.mon_labels,
+    datasets:[{ label:'P&L ($)', data:D.mon_pnl, backgroundColor: D.mon_pnl.map(v=>v>=0?'#3FB950':'#F85149') }]
+  },
+  options:{ responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ display:false } },
+    scales:{ y:{ grid:{ color:'#30363D' } } }
+  }
+});
+</script>
+{% endif %}
+{% endblock %}

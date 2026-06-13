@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Eliminar Cuenta{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card border-danger">
+      <div class="card-header text-red"><i class="bi bi-trash me-2"></i>Eliminar Cuenta</div>
+      <div class="card-body">
+        <p>¿Seguro que quieres eliminar la cuenta <strong class="text-gold">{{ object.name }}</strong>?</p>
+        <p class="text-subtle small">Se eliminarán también todos los trades asociados.</p>
+        <form method="post">{% csrf_token %}
+          <div class="d-flex gap-2">
+            <button class="btn btn-danger">Sí, eliminar</button>
+            <a href="{% url 'system:index' %}" class="btn btn-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

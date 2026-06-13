@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Trading Journal{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="text-gold mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h4>
+  <div class="d-flex gap-2">
+    {% if accounts %}
+    <select class="form-select form-select-sm" style="width:auto" onchange="location='?account='+this.value">
+      <option value="">Todas las cuentas</option>
+      {% for acc in accounts %}
+      <option value="{{ acc.id }}" {% if selected_account == acc.id|stringformat:"s" %}selected{% endif %}>
+        {{ acc.name }}
+      </option>
+      {% endfor %}
+    </select>
+    {% endif %}
+    <a href="{% url 'trades:create' %}" class="btn btn-gold btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Nueva Operación
+    </a>
+  </div>
+</div>
+
+<!-- ── KPI Cards ─────────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  {% with m=metrics %}
+  <div class="col-6 col-md-3">
+    <div class="card kpi-card p-3">
+      <div class="kpi-label">P&L NETO</div>
+      <div class="kpi-value {% if m.gross_pnl >= 0 %}text-green{% else %}text-red{% endif %}">
+        ${{ m.gross_pnl|floatformat:2 }}
+      </div>
+      <small class="text-subtle">ROE: {{ m.roe|floatformat:2 }}%</small>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card kpi-card p-3" style="border-left-color:var(--cyan)">
+      <div class="kpi-label">WIN RATE</div>
+      <div class="kpi-value text-cyan">{{ m.win_rate|floatformat:1 }}%</div>
+      <small class="text-subtle">{{ m.total_wins }}W  {{ m.total_losses }}L  {{ m.total_flats }}F</small>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card kpi-card p-3" style="border-left-color:var(--purple)">
+      <div class="kpi-label">PROFIT FACTOR</div>
+      <div class="kpi-value text-purple">{{ m.profit_factor|floatformat:2 }}×</div>
+      <small class="text-subtle">Expectancy: ${{ m.expectancy|floatformat:4 }}</small>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card kpi-card p-3" style="border-left-color:var(--orange)">
+      <div class="kpi-label">MAX DRAWDOWN</div>
+      <div class="kpi-value text-orange">{{ m.max_drawdown_pct|floatformat:1 }}%</div>
+      <small class="text-subtle">Sharpe: {{ m.sharpe_ratio|floatformat:2 }}</small>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card p-3" style="border-left:3px solid var(--green)">
+      <div class="kpi-label">BALANCE</div>
+      <div class="kpi-value text-green">${{ m.final_balance|floatformat:2 }}</div>
+      <small class="text-subtle">Inicial: ${{ m.initial_balance|floatformat:2 }}</small>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card p-3" style="border-left:3px solid var(--cyan)">
+      <div class="kpi-label">AVG R:R</div>
+      <div class="kpi-value text-cyan">{{ m.avg_rr|floatformat:2 }}R</div>
+      <small class="text-subtle">Total trades: {{ m.total_trades }}</small>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card p-3" style="border-left:3px solid var(--green)">
+      <div class="kpi-label">AVG WIN</div>
+      <div class="kpi-value text-green">${{ m.avg_win|floatformat:2 }}</div>
+      <small class="text-subtle">Mejor: ${{ m.best_trade|floatformat:2 }}</small>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card p-3" style="border-left:3px solid var(--red)">
+      <div class="kpi-label">AVG LOSS</div>
+      <div class="kpi-value text-red">${{ m.avg_loss|floatformat:2 }}</div>
+      <small class="text-subtle">Peor: ${{ m.worst_trade|floatformat:2 }}</small>
+    </div>
+  </div>
+  {% endwith %}
+</div>
+
+<!-- ── Gráficos fila 1 ─────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-md-8">
+    <div class="card p-3 h-100">
+      <h6 class="text-cyan mb-3"><i class="bi bi-graph-up me-2"></i>Equity Curve</h6>
+      <div class="chart-container" style="height:220px">
+        <canvas id="chartEquity"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3 h-100">
+      <h6 class="text-cyan mb-3"><i class="bi bi-pie-chart me-2"></i>Win / Loss / Flat</h6>
+      <div class="chart-container" style="height:220px">
+        <canvas id="chartWLF"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Gráficos fila 2 ─────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card p-3">
+      <h6 class="text-purple mb-3"><i class="bi bi-bar-chart me-2"></i>Setup W/L/F</h6>
+      <div class="chart-container" style="height:200px">
+        <canvas id="chartSetup"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3">
+      <h6 class="text-gold mb-3"><i class="bi bi-currency-dollar me-2"></i>P&L por Símbolo</h6>
+      <div class="chart-container" style="height:200px">
+        <canvas id="chartSymbol"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3">
+      <h6 class="text-orange mb-3"><i class="bi bi-exclamation-triangle me-2"></i>Top Errores</h6>
+      <div class="chart-container" style="height:200px">
+        <canvas id="chartErrors"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Gráfico mensual ─────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-md-12">
+    <div class="card p-3">
+      <h6 class="text-gold mb-3"><i class="bi bi-calendar3 me-2"></i>P&L Mensual</h6>
+      <div class="chart-container" style="height:180px">
+        <canvas id="chartMonthly"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Últimas operaciones ─────────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center py-2">
+    <span class="text-gold fw-bold"><i class="bi bi-clock-history me-2"></i>Últimas Operaciones</span>
+    <a href="{% url 'trades:list' %}" class="btn btn-outline-cyan btn-sm">Ver todas</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-striped table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Fecha</th><th>Símbolo</th><th>Pos.</th><th>Setup</th>
+          <th>R:R</th><th>P&L</th><th>W/L</th><th>Error</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in recent_trades %}
+        <tr>
+          <td class="text-subtle">{{ t.trade_date }}</td>
+          <td class="text-gold fw-bold">{{ t.symbol }}</td>
+          <td class="{% if t.position == 'Long' %}text-green{% else %}text-red{% endif %}">
+            {{ t.position }}
+          </td>
+          <td><span class="badge badge-{% if t.setup == 'OB' %}ob{% elif t.setup == 'FVG' %}fvg{% else %}mss{% endif %}">{{ t.setup }}</span></td>
+          <td class="text-cyan">{% if t.ratio_initial %}{{ t.ratio_initial }}R{% endif %}</td>
+          <td class="{% if t.pnl_real and t.pnl_real > 0 %}text-green{% elif t.pnl_real and t.pnl_real < 0 %}text-red{% else %}text-orange{% endif %} fw-bold">
+            {% if t.pnl_real %}${{ t.pnl_real|floatformat:2 }}{% endif %}
+          </td>
+          <td><span class="badge badge-{{ t.result|lower }}{% if t.result == 'W' %}win{% elif t.result == 'L' %}loss{% else %}flat{% endif %}">{{ t.result }}</span></td>
+          <td class="text-orange small">{{ t.error_type|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-subtle py-4">
+          No hay operaciones aún. <a href="{% url 'trades:create' %}" class="text-cyan">Registra la primera</a>.
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const D = {{ charts_json|safe }};
+Chart.defaults.color = '#8B949E';
+Chart.defaults.borderColor = '#30363D';
+
+const darkBg = { backgroundColor: '#161B22' };
+
+// ── Equity Curve ────────────────────────────────────────────────────────
+new Chart('chartEquity', {
+  type: 'line',
+  data: {
+    labels: D.eq_labels,
+    datasets: [
+      { label: 'Balance ($)', data: D.eq_balance,
+        borderColor:'#3FB950', backgroundColor:'rgba(63,185,80,.1)',
+        fill:true, tension:.3, pointRadius:2 },
+      { label: 'Drawdown (%)', data: D.eq_dd,
+        borderColor:'#F85149', backgroundColor:'rgba(248,81,73,.05)',
+        fill:true, tension:.3, pointRadius:1, yAxisID:'y2' }
+    ]
+  },
+  options: { responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ position:'bottom', labels:{ boxWidth:12 } } },
+    scales:{
+      y:  { grid:{ color:'#30363D' } },
+      y2: { position:'right', grid:{ drawOnChartArea:false } }
+    }
+  }
+});
+
+// ── Win/Loss/Flat Pie ────────────────────────────────────────────────────
+new Chart('chartWLF', {
+  type: 'doughnut',
+  data: {
+    labels: ['Win', 'Loss', 'Flat'],
+    datasets: [{ data: D.wlf_data,
+      backgroundColor:['#3FB950','#F85149','#DB6D28'],
+      borderColor:'#0D1117', borderWidth:3 }]
+  },
+  options: { responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ position:'bottom', labels:{ boxWidth:12 } } }
+  }
+});
+
+// ── Setup W/L/F ──────────────────────────────────────────────────────────
+new Chart('chartSetup', {
+  type: 'bar',
+  data: {
+    labels: D.s_labels,
+    datasets: [
+      { label:'Wins',   data:D.s_wins,   backgroundColor:'#3FB950' },
+      { label:'Losses', data:D.s_losses, backgroundColor:'#F85149' },
+      { label:'Flat',   data:D.s_flats,  backgroundColor:'#DB6D28' },
+    ]
+  },
+  options: { responsive:true, maintainAspectRatio:false,
+    scales:{ x:{ stacked:false }, y:{ stacked:false, grid:{ color:'#30363D' } } },
+    plugins:{ legend:{ position:'bottom', labels:{ boxWidth:12 } } }
+  }
+});
+
+// ── Symbol P&L ───────────────────────────────────────────────────────────
+new Chart('chartSymbol', {
+  type: 'bar',
+  data: {
+    labels: D.sym_labels,
+    datasets: [{
+      label: 'P&L ($)', data: D.sym_pnl,
+      backgroundColor: D.sym_pnl.map(v => v >= 0 ? '#3FB950' : '#F85149'),
+    }]
+  },
+  options: { responsive:true, maintainAspectRatio:false, indexAxis:'y',
+    plugins:{ legend:{ display:false } },
+    scales:{ x:{ grid:{ color:'#30363D' } } }
+  }
+});
+
+// ── Errores ──────────────────────────────────────────────────────────────
+new Chart('chartErrors', {
+  type: 'bar',
+  data: {
+    labels: D.err_labels,
+    datasets: [{ label:'Frecuencia', data:D.err_counts, backgroundColor:'#DB6D28' }]
+  },
+  options: { responsive:true, maintainAspectRatio:false, indexAxis:'y',
+    plugins:{ legend:{ display:false } },
+    scales:{ x:{ grid:{ color:'#30363D' } } }
+  }
+});
+
+// ── P&L Mensual ──────────────────────────────────────────────────────────
+new Chart('chartMonthly', {
+  type: 'bar',
+  data: {
+    labels: D.mon_labels,
+    datasets: [{
+      label: 'P&L Mensual ($)', data: D.mon_pnl,
+      backgroundColor: D.mon_pnl.map(v => v >= 0 ? '#3FB950' : '#F85149'),
+    }]
+  },
+  options: { responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ display:false } },
+    scales:{ y:{ grid:{ color:'#30363D' } } }
+  }
+});
+</script>
+{% endblock %}

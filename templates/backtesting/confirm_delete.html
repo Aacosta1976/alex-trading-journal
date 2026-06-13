@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Eliminar Backtest{% endblock %}
+{% block content %}
+<div class="row justify-content-center mt-5">
+  <div class="col-md-5">
+    <div class="card p-4 text-center">
+      <i class="bi bi-exclamation-triangle-fill text-red" style="font-size:3rem"></i>
+      <h5 class="text-red mt-3">¿Eliminar backtest?</h5>
+      <p class="text-subtle">Vas a eliminar <strong class="text-gold">{{ object.name }}</strong>. Esta acción no se puede deshacer.</p>
+      <div class="d-flex gap-3 justify-content-center mt-3">
+        <a href="{% url 'backtesting:list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        <form method="post">{% csrf_token %}
+          <button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i>Eliminar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

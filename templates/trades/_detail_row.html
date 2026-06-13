@@ -1,0 +1,6 @@
+<div class="d-flex justify-content-between border-bottom py-1" style="border-color:var(--border)!important">
+  <small class="text-subtle">{{ label }}</small>
+  <span class="text-{{ color|default:'text' }} small fw-bold">
+    {% if prefix %}{{ prefix }}{% endif %}{{ value|default:"—" }}{% if suffix %}{{ suffix }}{% endif %}
+  </span>
+</div>

@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block title %}Chart — Trading Journal{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="text-gold mb-0"><i class="bi bi-bar-chart-line me-2"></i>Chart</h4>
+
+  <!-- Filtros -->
+  <form method="get" class="d-flex gap-2">
+    <select name="account" class="form-select form-select-sm" style="width:160px">
+      <option value="">Todas las cuentas</option>
+      {% for acc in accounts %}
+      <option value="{{ acc.pk }}" {% if selected_account == acc.pk|stringformat:"s" %}selected{% endif %}>
+        {{ acc.name }}
+      </option>
+      {% endfor %}
+    </select>
+    <select name="model" class="form-select form-select-sm" style="width:140px">
+      <option value="">Todos los modelos</option>
+      {% for m in trading_models %}
+      <option value="{{ m.pk }}" {% if selected_model == m.pk|stringformat:"s" %}selected{% endif %}>
+        {{ m.name }}
+      </option>
+      {% endfor %}
+    </select>
+    <select name="period" class="form-select form-select-sm" style="width:140px">
+      <option value="">Todo el tiempo</option>
+      <option value="this_month" {% if selected_period == "this_month" %}selected{% endif %}>Este mes</option>
+      <option value="this_year"  {% if selected_period == "this_year"  %}selected{% endif %}>Este año</option>
+    </select>
+    <button class="btn btn-gold btn-sm">Filtrar</button>
+  </form>
+</div>
+
+<!-- ── KPIs rápidos ─────────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-2">
+    <div class="card kpi-card p-3 text-center">
+      <div class="kpi-value text-cyan">{{ metrics.total_trades }}</div>
+      <div class="kpi-label">Total Trades</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card kpi-card p-3 text-center">
+      <div class="kpi-value text-green">{{ metrics.win_rate }}%</div>
+      <div class="kpi-label">Win Rate</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card kpi-card p-3 text-center">
+      <div class="kpi-value {% if metrics.gross_pnl >= 0 %}text-green{% else %}text-red{% endif %}">
+        ${{ metrics.gross_pnl }}
+      </div>
+      <div class="kpi-label">Net P&L</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card kpi-card p-3 text-center">
+      <div class="kpi-value text-gold">{{ metrics.profit_factor }}</div>
+      <div class="kpi-label">Profit Factor</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card kpi-card p-3 text-center">
+      <div class="kpi-value text-cyan">{{ metrics.avg_rr }}</div>
+      <div class="kpi-label">Avg R:R</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card kpi-card p-3 text-center">
+      <div class="kpi-value text-red">{{ metrics.max_drawdown_pct }}%</div>
+      <div class="kpi-label">Max Drawdown</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Equity Curve ─────────────────────────────────────────────────────────── -->
+<div class="card mb-4">
+  <div class="card-header"><i class="bi bi-graph-up me-2 text-gold"></i>Equity Curve</div>
+  <div class="card-body"><div class="chart-container" style="height:280px">
+    <canvas id="equityChart"></canvas>
+  </div></div>
+</div>
+
+<!-- ── Fila 2: Profitability by Model + Win Rate by Session ─────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-diagram-3 me-2 text-cyan"></i>Profitability by Model</div>
+      <div class="card-body"><div class="chart-container" style="height:240px">
+        <canvas id="modelChart"></canvas>
+      </div></div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-clock me-2 text-gold"></i>Win Rate by Session</div>
+      <div class="card-body"><div class="chart-container" style="height:240px">
+        <canvas id="sessionChart"></canvas>
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Fila 3: Outcomes pie + Mistakes ─────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-md-5">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-pie-chart me-2 text-purple"></i>Outcomes Distribution</div>
+      <div class="card-body"><div class="chart-container" style="height:260px">
+        <canvas id="outcomeChart"></canvas>
+      </div></div>
+    </div>
+  </div>
+  <div class="col-md-7">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-exclamation-triangle me-2 text-red"></i>Top Mistakes</div>
+      <div class="card-body"><div class="chart-container" style="height:260px">
+        <canvas id="mistakeChart"></canvas>
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Fila 4: Win Rate by Symbol + Monthly P&L ────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-currency-exchange me-2 text-green"></i>Win Rate by Symbol</div>
+      <div class="card-body"><div class="chart-container" style="height:240px">
+        <canvas id="symbolChart"></canvas>
+      </div></div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-calendar3 me-2 text-orange"></i>Monthly P&L</div>
+      <div class="card-body"><div class="chart-container" style="height:240px">
+        <canvas id="monthlyChart"></canvas>
+      </div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Fila 5: Setup Grade + Bias ──────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-star me-2 text-gold"></i>Win Rate by Setup Grade</div>
+      <div class="card-body"><div class="chart-container" style="height:240px">
+        <canvas id="gradeChart"></canvas>
+      </div></div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-arrow-up-down me-2 text-cyan"></i>Win Rate by Bias</div>
+      <div class="card-body"><div class="chart-container" style="height:240px">
+        <canvas id="biasChart"></canvas>
+      </div></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const D = {{ charts_json|safe }};
+
+const GOLD   = '#F0B429';
+const CYAN   = '#58A6FF';
+const GREEN  = '#3FB950';
+const RED    = '#F85149';
+const PURPLE = '#BC8CFF';
+const ORANGE = '#DB6D28';
+const BORDER = '#30363D';
+const TEXT   = '#8B949E';
+
+Chart.defaults.color = TEXT;
+Chart.defaults.borderColor = BORDER;
+
+function barChart(id, labels, datasets, opts={}) {
+  return new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: { labels, datasets },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:TEXT}}},
+               scales:{x:{ticks:{color:TEXT},grid:{color:BORDER}}, y:{ticks:{color:TEXT},grid:{color:BORDER}}},
+               ...opts }
+  });
+}
+
+// 1. Equity Curve
+new Chart(document.getElementById('equityChart'), {
+  type: 'line',
+  data: {
+    labels: D.eq_labels,
+    datasets: [{
+      label: 'Balance ($)', data: D.eq_balance,
+      borderColor: GOLD, backgroundColor: 'rgba(240,180,41,.1)',
+      fill: true, tension: 0.3, pointRadius: 3
+    }]
+  },
+  options: { responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:TEXT}}},
+    scales:{x:{ticks:{color:TEXT},grid:{color:BORDER}}, y:{ticks:{color:TEXT},grid:{color:BORDER}}} }
+});
+
+// 2. Profitability by Model
+barChart('modelChart', D.model_labels, [
+  { label:'Wins',   data:D.model_wins,   backgroundColor: GREEN  },
+  { label:'Losses', data:D.model_losses, backgroundColor: RED    },
+]);
+
+// 3. Win Rate by Session
+barChart('sessionChart', D.sess_labels, [
+  { label:'Win Rate (%)', data:D.sess_wr, backgroundColor: CYAN }
+]);
+
+// 4. Outcomes Pie
+new Chart(document.getElementById('outcomeChart'), {
+  type: 'doughnut',
+  data: {
+    labels: D.outcome_labels,
+    datasets:[{ data: D.outcome_counts,
+      backgroundColor:[GREEN, CYAN, GOLD, ORANGE, PURPLE, RED, '#555','#888'] }]
+  },
+  options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right',labels:{color:TEXT}}} }
+});
+
+// 5. Mistakes
+barChart('mistakeChart', D.mistake_labels, [
+  { label:'Frecuencia', data:D.mistake_counts, backgroundColor: RED }
+], { indexAxis:'y' });
+
+// 6. Win Rate by Symbol
+barChart('symbolChart', D.sym_labels, [
+  { label:'Win Rate (%)', data:D.sym_wr, backgroundColor: GREEN }
+]);
+
+// 7. Monthly P&L
+barChart('monthlyChart', D.mon_labels, [
+  { label:'P&L ($)', data:D.mon_pnl,
+    backgroundColor: D.mon_pnl.map(v => v >= 0 ? 'rgba(63,185,80,.7)' : 'rgba(248,81,73,.7)') }
+]);
+
+// 8. Setup Grade
+barChart('gradeChart', D.grade_labels, [
+  { label:'Win Rate (%)', data:D.grade_wr, backgroundColor: GOLD }
+]);
+
+// 9. Bias
+barChart('biasChart', D.bias_labels, [
+  { label:'Win Rate (%)', data:D.bias_wr, backgroundColor: PURPLE }
+]);
+</script>
+{% endblock %}

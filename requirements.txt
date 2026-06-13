@@ -1,0 +1,5 @@
+django>=4.2,<5.0
+python-dotenv>=1.0
+pillow>=10.0          # para screenshots (ImageField)
+reportlab>=4.0        # export PDF
+openpyxl>=3.1         # export Excel

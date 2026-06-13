@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}System — Trading Journal{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="text-gold mb-0"><i class="bi bi-display me-2"></i>System</h4>
+  <div class="d-flex gap-2">
+    <button class="btn btn-gold btn-sm" data-bs-toggle="modal" data-bs-target="#newAccountModal">
+      <i class="bi bi-plus-lg me-1"></i>Nueva Cuenta
+    </button>
+    <button class="btn btn-outline-cyan btn-sm" data-bs-toggle="modal" data-bs-target="#newModelModal">
+      <i class="bi bi-plus-lg me-1"></i>Nuevo Modelo
+    </button>
+  </div>
+</div>
+
+<!-- ── Tabla de Cuentas ──────────────────────────────────────────────────────── -->
+<div class="card mb-4">
+  <div class="card-header"><i class="bi bi-wallet2 me-2 text-gold"></i>Accounts</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-striped mb-0">
+        <thead>
+          <tr>
+            <th>Account</th>
+            <th>Type</th>
+            <th>% Win Rate</th>
+            <th>Trades</th>
+            <th>Net PnL</th>
+            <th>Current Balance</th>
+            <th>Goal</th>
+            <th>Goal Progress</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in enriched_accounts %}
+          <tr>
+            <td class="fw-bold text-cyan">{{ item.account.name }}</td>
+            <td>
+              <span class="badge
+                {% if item.account.account_type == 'Challange' %}bg-warning text-dark
+                {% elif item.account.account_type == 'Backtest' %}bg-info text-dark
+                {% elif item.account.account_type == 'Live' %}bg-success
+                {% else %}bg-secondary{% endif %}">
+                {{ item.account.get_account_type_display }}
+              </span>
+            </td>
+            <td class="text-green">{{ item.win_rate }}%</td>
+            <td>{{ item.total_trades }}</td>
+            <td class="{% if item.net_pnl >= 0 %}text-green{% else %}text-red{% endif %} fw-bold">
+              {% if item.net_pnl >= 0 %}▲{% else %}▼{% endif %}
+              ${{ item.net_pnl }}
+            </td>
+            <td>${{ item.current_balance }}</td>
+            <td>
+              {% if item.account.goal %}${{ item.account.goal }}{% else %}<span class="text-subtle">—</span>{% endif %}
+            </td>
+            <td>
+              {% if item.account.goal %}
+              <div class="goal-bar" title="{{ item.goal_pct }}%">{{ item.goal_bar }}</div>
+              <small class="text-subtle">{{ item.goal_pct }}%</small>
+              {% else %}
+              <span class="text-subtle">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'system:account_edit' item.account.pk %}"
+                 class="btn btn-sm btn-outline-secondary me-1">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'system:account_delete' item.account.pk %}"
+                 class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash"></i>
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9" class="text-center text-subtle py-4">
+            No hay cuentas. <a href="#" data-bs-toggle="modal" data-bs-target="#newAccountModal">Crear una</a>
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── Tabla de Modelos ──────────────────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-header"><i class="bi bi-diagram-3 me-2 text-cyan"></i>Trading Models</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-striped mb-0">
+        <thead>
+          <tr>
+            <th>Modelo</th>
+            <th>Descripción</th>
+            <th>Trades</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for model in trading_models %}
+          <tr>
+            <td class="fw-bold text-gold">{{ model.name }}</td>
+            <td class="text-subtle">{{ model.description|truncatechars:80 }}</td>
+            <td>{{ model.trades.count }}</td>
+            <td>
+              <a href="{% url 'system:model_edit' model.pk %}"
+                 class="btn btn-sm btn-outline-secondary me-1">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'system:model_delete' model.pk %}"
+                 class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash"></i>
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="text-center text-subtle py-4">
+            No hay modelos. <a href="#" data-bs-toggle="modal" data-bs-target="#newModelModal">Crear uno</a>
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal Nueva Cuenta ───────────────────────────────────────────────────── -->
+<div class="modal fade" id="newAccountModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background:var(--bg-card);border-color:var(--border)">
+      <div class="modal-header" style="border-color:var(--border)">
+        <h5 class="modal-title text-gold">Nueva Cuenta</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'trades:account_create' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          {% for field in account_form %}
+          <div class="mb-3">
+            <label class="form-label">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        <div class="modal-footer" style="border-color:var(--border)">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-gold btn-sm">Crear cuenta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal Nuevo Modelo ────────────────────────────────────────────────────── -->
+<div class="modal fade" id="newModelModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background:var(--bg-card);border-color:var(--border)">
+      <div class="modal-header" style="border-color:var(--border)">
+        <h5 class="modal-title text-gold">Nuevo Modelo de Trading</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'trades:model_create' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          {% for field in model_form %}
+          <div class="mb-3">
+            <label class="form-label">{{ field.label }}</label>
+            {{ field }}
+          </div>
+          {% endfor %}
+        </div>
+        <div class="modal-footer" style="border-color:var(--border)">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-gold btn-sm">Crear modelo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

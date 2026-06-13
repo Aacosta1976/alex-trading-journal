@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Diario de Operaciones{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="text-gold mb-0"><i class="bi bi-journal-text me-2"></i>Diario de Operaciones</h4>
+  <a href="{% url 'trades:create' %}" class="btn btn-gold btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>Nueva Operación
+  </a>
+</div>
+
+<!-- Filtros -->
+<div class="card p-3 mb-3">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-6 col-md-2">{{ filter_form.symbol.label_tag }}<br>{{ filter_form.symbol }}</div>
+    <div class="col-6 col-md-2">{{ filter_form.setup.label_tag }}<br>{{ filter_form.setup }}</div>
+    <div class="col-6 col-md-2">{{ filter_form.result.label_tag }}<br>{{ filter_form.result }}</div>
+    <div class="col-6 col-md-2">{{ filter_form.date_from.label_tag }}<br>{{ filter_form.date_from }}</div>
+    <div class="col-6 col-md-2">{{ filter_form.date_to.label_tag }}<br>{{ filter_form.date_to }}</div>
+    <div class="col-6 col-md-2 d-flex gap-2">
+      <button type="submit" class="btn btn-outline-cyan btn-sm w-100">
+        <i class="bi bi-search me-1"></i>Filtrar
+      </button>
+      <a href="{% url 'trades:list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-x"></i>
+      </a>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-header py-2 d-flex justify-content-between">
+    <span class="text-subtle small">{{ total_trades }} operación{{ total_trades|pluralize:"es" }}</span>
+    <span class="text-subtle small">Página {{ page }} de {{ total_pages }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-striped table-hover mb-0">
+      <thead>
+        <tr>
+          <th>#</th><th>Fecha</th><th>Símbolo</th><th>Pos.</th>
+          <th>Setup</th><th>TF</th><th>Risk%</th><th>R:R</th>
+          <th>P&L Real</th><th>W/L</th><th>Acum $</th><th>Error</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in trades %}
+        <tr>
+          <td class="text-subtle small">{{ t.pk }}</td>
+          <td class="text-subtle">{{ t.trade_date }}</td>
+          <td class="text-gold fw-bold">{{ t.symbol }}</td>
+          <td class="{% if t.position == 'Long' %}text-green{% else %}text-red{% endif %} fw-bold small">
+            {% if t.position == 'Long' %}▲{% else %}▼{% endif %} {{ t.position }}
+          </td>
+          <td>
+            <span class="badge badge-{% if t.setup == 'OB' %}ob{% elif t.setup == 'FVG' %}fvg{% else %}mss{% endif %}">
+              {{ t.setup }}
+            </span>
+          </td>
+          <td class="text-subtle small">{{ t.timeframe }}</td>
+          <td class="text-cyan small">{% if t.risk_pct %}{{ t.risk_pct }}%{% endif %}</td>
+          <td class="text-cyan small">{% if t.ratio_initial %}{{ t.ratio_initial }}R{% endif %}</td>
+          <td class="fw-bold {% if t.pnl_real %}{% if t.pnl_real > 0 %}text-green{% elif t.pnl_real < 0 %}text-red{% else %}text-orange{% endif %}{% endif %}">
+            {% if t.pnl_real %}${{ t.pnl_real|floatformat:2 }}{% endif %}
+          </td>
+          <td>
+            <span class="badge {% if t.result == 'W' %}badge-win{% elif t.result == 'L' %}badge-loss{% else %}badge-flat{% endif %}">
+              {{ t.result }}
+            </span>
+          </td>
+          <td class="{% if t.profit_cumul %}{% if t.profit_cumul >= 0 %}text-green{% else %}text-red{% endif %}{% endif %} small">
+            {% if t.profit_cumul %}${{ t.profit_cumul|floatformat:2 }}{% endif %}
+          </td>
+          <td class="text-orange small">{{ t.error_type|default:"—" }}</td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'trades:detail' t.pk %}" class="btn btn-sm btn-outline-secondary" title="Ver">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{% url 'trades:update' t.pk %}" class="btn btn-sm btn-outline-cyan" title="Editar">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'trades:delete' t.pk %}" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                <i class="bi bi-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="13" class="text-center text-subtle py-5">
+          No hay operaciones. <a href="{% url 'trades:create' %}" class="text-cyan">Registra la primera</a>.
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if total_pages > 1 %}
+  <div class="card-footer d-flex justify-content-center">
+    <nav><ul class="pagination pagination-sm mb-0">
+      {% if page > 1 %}
+      <li class="page-item"><a class="page-link" href="?page={{ page|add:"-1" }}">‹</a></li>
+      {% endif %}
+      <li class="page-item active"><span class="page-link">{{ page }}</span></li>
+      {% if page < total_pages %}
+      <li class="page-item"><a class="page-link" href="?page={{ page|add:"1" }}">›</a></li>
+      {% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

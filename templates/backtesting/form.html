@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Nuevo Backtest{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="text-gold mb-0"><i class="bi bi-play-fill me-2"></i>Nuevo Backtest</h4>
+  <a href="{% url 'backtesting:list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Volver
+  </a>
+</div>
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="card p-4">
+      <p class="text-subtle small mb-3">
+        El backtest filtra tus operaciones históricas por símbolo, setup y período,
+        y recalcula los resultados aplicando el riesgo indicado sobre un balance dinámico.
+      </p>
+      <form method="post">
+        {% csrf_token %}
+        {% if form.errors %}
+        <div class="alert alert-danger py-2">
+          {% for f in form %}{% for e in f.errors %}<div>{{ e }}</div>{% endfor %}{% endfor %}
+          {% for e in form.non_field_errors %}<div>{{ e }}</div>{% endfor %}
+        </div>
+        {% endif %}
+        <div class="row g-3">
+          <div class="col-12">     <label class="form-label">Nombre *</label>{{ form.name }}</div>
+          <div class="col-md-6">   <label class="form-label">Símbolo *</label>{{ form.symbol }}</div>
+          <div class="col-md-6">   <label class="form-label">Setup</label>{{ form.setup }}</div>
+          <div class="col-md-6">   <label class="form-label">Fecha inicio *</label>{{ form.date_from }}</div>
+          <div class="col-md-6">   <label class="form-label">Fecha fin *</label>{{ form.date_to }}</div>
+          <div class="col-md-6">   <label class="form-label">Balance inicial ($) *</label>{{ form.initial_balance }}</div>
+          <div class="col-md-6">
+            <label class="form-label">Riesgo por trade (%) *</label>
+            {{ form.risk_pct }}
+            <small class="text-subtle">{{ form.risk_pct.help_text }}</small>
+          </div>
+        </div>
+        <div class="d-flex gap-2 justify-content-end mt-4">
+          <a href="{% url 'backtesting:list' %}" class="btn btn-outline-secondary">Cancelar</a>
+          <button type="submit" class="btn btn-gold">
+            <i class="bi bi-play-fill me-1"></i>Ejecutar Backtest
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

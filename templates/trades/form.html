@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — Trading Journal{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="text-gold mb-0"><i class="bi bi-pencil-square me-2"></i>{{ title }}</h4>
+  <a href="{% url 'trades:list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Volver
+  </a>
+</div>
+
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {% if form.errors %}
+  <div class="alert alert-danger py-2">
+    {% for f in form %}{% for e in f.errors %}<div><strong>{{ f.label }}:</strong> {{ e }}</div>{% endfor %}{% endfor %}
+    {% for e in form.non_field_errors %}<div>{{ e }}</div>{% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- IDENTIFICACIÓN -->
+  <div class="card mb-3">
+    <div class="card-header py-2"><span class="text-cyan fw-bold small">IDENTIFICACIÓN</span></div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3"><label class="form-label">Cuenta *</label>{{ form.account }}</div>
+        <div class="col-md-2"><label class="form-label">Modelo</label>{{ form.trading_model }}</div>
+        <div class="col-md-2"><label class="form-label">Fecha entrada *</label>{{ form.entry_date }}</div>
+        <div class="col-md-2"><label class="form-label">Hora entrada</label>{{ form.entry_time }}</div>
+        <div class="col-md-2"><label class="form-label">Estado</label>{{ form.status }}</div>
+        <div class="col-md-1 d-flex align-items-end">
+          <div class="form-check">
+            {{ form.is_backtest }}
+            <label class="form-check-label form-label">Backtest</label>
+          </div>
+        </div>
+      </div>
+      <div class="row g-3 mt-1">
+        <div class="col-md-2"><label class="form-label">Fecha salida</label>{{ form.exit_date }}</div>
+        <div class="col-md-2"><label class="form-label">Hora salida</label>{{ form.exit_time }}</div>
+        <div class="col-md-2"><label class="form-label">Duración (min)</label>{{ form.duration_minutes }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SÍMBOLO & DIRECCIÓN -->
+  <div class="card mb-3">
+    <div class="card-header py-2"><span class="text-gold fw-bold small">SÍMBOLO & DIRECCIÓN</span></div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3"><label class="form-label">Símbolo *</label>{{ form.symbol }}</div>
+        <div class="col-md-2"><label class="form-label">Posición</label>{{ form.position }}</div>
+        <div class="col-md-2"><label class="form-label">Tipo de orden</label>{{ form.order_type }}</div>
+        <div class="col-md-2"><label class="form-label">Tipo de trade</label>{{ form.type_of_trade }}</div>
+        <div class="col-md-3"><label class="form-label">Calidad del setup</label>{{ form.setup_grade }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTEXTO DE MERCADO -->
+  <div class="card mb-3">
+    <div class="card-header py-2"><span class="text-purple fw-bold small">CONTEXTO DE MERCADO</span></div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3"><label class="form-label">Bias</label>{{ form.bias }}</div>
+        <div class="col-md-3"><label class="form-label">Sesión</label>{{ form.session }}</div>
+        <div class="col-md-3"><label class="form-label">Timeframe entrada</label>{{ form.entry_timeframe }}</div>
+        <div class="col-md-3"><label class="form-label">Impacto noticias</label>{{ form.news_impact }}</div>
+        <div class="col-md-6"><label class="form-label">Condiciones de mercado</label>{{ form.market_conditions }}</div>
+        <div class="col-md-6"><label class="form-label">Señal de entrada</label>{{ form.entry_signal }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFLUENCIAS & NIVELES -->
+  <div class="card mb-3">
+    <div class="card-header py-2"><span class="text-cyan fw-bold small">CONFLUENCIAS & NIVELES CLAVE</span></div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Confluencias</label>
+          <div class="row row-cols-2 g-1">
+            {% for checkbox in form.confluences %}
+            <div class="col">{{ checkbox }}</div>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Niveles Clave</label>
+          <div class="row row-cols-2 g-1">
+            {% for checkbox in form.key_levels %}
+            <div class="col">{{ checkbox }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GESTIÓN DE RIESGO -->
+  <div class="card mb-3">
+    <div class="card-header py-2"><span class="text-orange fw-bold small">GESTIÓN DE RIESGO</span></div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3"><label class="form-label">Riesgo (%)</label>{{ form.risk_pct }}</div>
+        <div class="col-md-3"><label class="form-label">S/L Pips</label>{{ form.sl_pips }}</div>
+        <div class="col-md-3"><label class="form-label">Gestión del SL</label>{{ form.sl_management }}</div>
+      </div>
+      <div class="mt-3">
+        <label class="form-label">Gestión del TP</label>
+        <div class="row row-cols-3 g-1">
+          {% for checkbox in form.tp_management %}
+          <div class="col">{{ checkbox }}</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTADO -->
+  <div class="card mb-3">
+    <div class="card-header py-2"><span class="text-green fw-bold small">RESULTADO</span></div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3"><label class="form-label">Outcome</label>{{ form.outcome }}</div>
+        <div class="col-md-3"><label class="form-label">R:R conseguido</label>{{ form.actual_rr }}</div>
+        <div class="col-md-3"><label class="form-label">R:R máx. alcanzado</label>{{ form.max_rr_reached }}</div>
+        <div class="col-md-3"><label class="form-label">Gross P&L ($)</label>{{ form.gross_pnl }}</div>
+        <div class="col-md-3"><label class="form-label">Fees ($)</label>{{ form.fees }}</div>
+        <div class="col-md-3"><label class="form-label">Net P&L ($)</label>{{ form.net_pnl }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANÁLISIS POST-TRADE -->
+  <div class="card mb-3">
+    <div class="card-header py-2"><span class="text-red fw-bold small">ANÁLISIS POST-TRADE</span></div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-12">
+          <label class="form-label">Errores cometidos</label>
+          <div class="row row-cols-3 g-1">
+            {% for checkbox in form.mistakes %}
+            <div class="col">{{ checkbox }}</div>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="col-md-12"><label class="form-label">Notas</label>{{ form.notes }}</div>
+        <div class="col-md-6"><label class="form-label">Screenshot</label>{{ form.screenshot }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 justify-content-end mb-4">
+    <a href="{% url 'trades:list' %}" class="btn btn-outline-secondary">Cancelar</a>
+    <button type="submit" class="btn btn-gold">
+      <i class="bi bi-check-lg me-1"></i>{{ action }}
+    </button>
+  </div>
+</form>
+{% endblock %}

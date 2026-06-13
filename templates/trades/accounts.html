@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Cuentas — Trading Journal{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="text-gold mb-0"><i class="bi bi-wallet2 me-2"></i>Cuentas</h4>
+  <a href="{% url 'trades:account_create' %}" class="btn btn-gold btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>Nueva Cuenta
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-striped mb-0">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Tipo</th>
+            <th>Balance Inicial</th>
+            <th>Balance Actual</th>
+            <th>Net P&L</th>
+            <th>Meta</th>
+            <th>Win Rate</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for acc in accounts %}
+          <tr>
+            <td class="fw-bold text-cyan">{{ acc.name }}</td>
+            <td>
+              <span class="badge
+                {% if acc.account_type == 'Challange' %}bg-warning text-dark
+                {% elif acc.account_type == 'Backtest' %}bg-info text-dark
+                {% elif acc.account_type == 'Live' %}bg-success
+                {% else %}bg-secondary{% endif %}">
+                {{ acc.get_account_type_display }}
+              </span>
+            </td>
+            <td>${{ acc.initial_balance }}</td>
+            <td>${{ acc.current_balance }}</td>
+            <td class="{% if acc.net_pnl >= 0 %}text-green{% else %}text-red{% endif %} fw-bold">
+              ${{ acc.net_pnl }}
+            </td>
+            <td>{% if acc.goal %}${{ acc.goal }}{% else %}<span class="text-subtle">—</span>{% endif %}</td>
+            <td class="text-green">{{ acc.win_rate }}%</td>
+            <td>
+              <a href="{% url 'system:account_edit' acc.pk %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-pencil"></i>
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-subtle py-4">
+              No hay cuentas. <a href="{% url 'trades:account_create' %}">Crear una</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
