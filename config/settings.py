@@ -1,17 +1,17 @@
 """
-Django settings — Trading Journal v2
-Basado en Notion: Alex Trading Journal
+Django settings - Trading Journal TFG
 """
-
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import dj_database_url
 
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-change-this-in-production")
-DEBUG      = os.getenv("DEBUG", "True") == "True"
+DEBUG = os.getenv("DEBUG", "True") == "True"
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 AUTH_USER_MODEL = "authentication.User"
@@ -23,7 +23,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # Apps del proyecto
+    "crispy_forms",
+    "crispy_bootstrap5",
     "apps.authentication",
     "apps.trades",
     "apps.dashboard",
@@ -35,6 +36,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -64,10 +66,10 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME":   BASE_DIR / "db.sqlite3",
-    }
+    "default": dj_database_url.config(
+        default="sqlite:///" + str(BASE_DIR / "db.sqlite3"),
+        conn_max_age=600,
+    )
 }
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -78,19 +80,23 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = "es-es"
-TIME_ZONE     = "Europe/Madrid"
-USE_I18N      = True
-USE_TZ        = True
+TIME_ZONE = "Europe/Madrid"
+USE_I18N = True
+USE_TZ = True
 
-STATIC_URL  = "/static/"
+STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-MEDIA_URL  = "/media/"
+MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-LOGIN_URL          = "/auth/login/"
+LOGIN_URL = "/auth/login/"
 LOGIN_REDIRECT_URL = "/"
-LOGOUT_REDIRECT_URL= "/auth/login/"
+LOGOUT_REDIRECT_URL = "/auth/login/"
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
