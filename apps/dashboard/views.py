@@ -25,6 +25,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             "actual_rr", "max_rr_reached", "risk_pct", "sl_pips",
             "session", "bias", "entry_timeframe", "setup_grade",
             "news_impact", "mistakes", "status", "is_backtest",
+            "position",
             "trading_model__name", "account__initial_balance",
         ))
         metrics = compute_metrics(trades)
@@ -83,5 +84,20 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         ctx["charts_json"]      = json.dumps(charts)
         ctx["accounts"]         = Account.objects.filter(user=user)
         ctx["selected_account"] = account_id
-        ctx["recent_trades"]    = list(reversed(trades))[:10]
+
+        # NOTA (fix incidencia Dashboard): "recent_trades" viene de un .values(),
+        # es decir son diccionarios, no instancias de Trade, por lo que no tienen
+        # los metodos/propiedades del modelo (get_setup_grade_display, is_winner...).
+        # Aqui se calcula manualmente el resultado W/L a partir de "outcome".
+        WIN_OUTCOMES  = ("maximum_profit", "great_exit", "good_exit", "partial_win")
+        LOSS_OUTCOMES = ("stop_loss", "winning_turned_loser")
+        recent = list(reversed(trades))[:10]
+        for t in recent:
+            if t["outcome"] in WIN_OUTCOMES:
+                t["wl"] = "W"
+            elif t["outcome"] in LOSS_OUTCOMES:
+                t["wl"] = "L"
+            else:
+                t["wl"] = "—"
+        ctx["recent_trades"] = recent
         return ctx

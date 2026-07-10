@@ -56,6 +56,23 @@ class TradeListView(LoginRequiredMixin, ListView):
         ctx["session_choices"]= Trade.SESSION_CHOICES
         ctx["bias_choices"]   = Trade.BIAS_CHOICES
         ctx["filters"]        = self.request.GET
+
+        # Fix INC-02: la columna "Acum $" (P&L acumulado) no existe como campo en el
+        # modelo Trade -- se calcula aquí como suma corrida de net_pnl en orden
+        # cronológico ascendente sobre TODO el conjunto filtrado (no solo la página
+        # actual, para que el acumulado sea correcto independientemente de la
+        # paginación), y se adjunta como atributo `cumulative_pnl` a cada trade de la
+        # página actual (que se sigue mostrando en orden descendente).
+        import datetime as _dt
+        all_filtered = self.get_queryset().order_by("entry_date", "entry_time", "created_at")
+        running_totals = {}
+        running = 0
+        for t in all_filtered:
+            running += float(t.net_pnl or 0)
+            running_totals[t.pk] = running
+        for t in ctx["trades"]:
+            t.cumulative_pnl = running_totals.get(t.pk)
+
         return ctx
 
 

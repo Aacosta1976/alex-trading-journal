@@ -9,13 +9,55 @@
 </div>
 
 <!-- Filtros -->
+<!-- NOTA (fix incidencia Journal): la vista TradeListView filtra por los parametros
+     GET "q", "account", "outcome", "model" y "session" (ver apps/trades/views.py).
+     El formulario anterior usaba un "filter_form" que nunca existio en el
+     contexto, por eso los campos salian vacios. Aqui se usan los datos reales
+     que la vista si entrega: accounts, outcome_choices, trading_models,
+     session_choices y "filters" (el request.GET actual, para mantener la
+     seleccion tras enviar el formulario). -->
 <div class="card p-3 mb-3">
   <form method="get" class="row g-2 align-items-end">
-    <div class="col-6 col-md-2">{{ filter_form.symbol.label_tag }}<br>{{ filter_form.symbol }}</div>
-    <div class="col-6 col-md-2">{{ filter_form.setup.label_tag }}<br>{{ filter_form.setup }}</div>
-    <div class="col-6 col-md-2">{{ filter_form.result.label_tag }}<br>{{ filter_form.result }}</div>
-    <div class="col-6 col-md-2">{{ filter_form.date_from.label_tag }}<br>{{ filter_form.date_from }}</div>
-    <div class="col-6 col-md-2">{{ filter_form.date_to.label_tag }}<br>{{ filter_form.date_to }}</div>
+    <div class="col-6 col-md-2">
+      <label class="form-label small text-subtle">Buscar</label>
+      <input type="text" name="q" value="{{ filters.q }}" class="form-control form-control-sm" placeholder="Símbolo o notas...">
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label small text-subtle">Cuenta</label>
+      <select name="account" class="form-select form-select-sm">
+        <option value="">Todas</option>
+        {% for acc in accounts %}
+        <option value="{{ acc.id }}" {% if filters.account == acc.id|stringformat:"s" %}selected{% endif %}>{{ acc.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label small text-subtle">Resultado</label>
+      <select name="outcome" class="form-select form-select-sm">
+        <option value="">Todos</option>
+        {% for value, label in outcome_choices %}
+        <option value="{{ value }}" {% if filters.outcome == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label small text-subtle">Modelo</label>
+      <select name="model" class="form-select form-select-sm">
+        <option value="">Todos</option>
+        {% for m in trading_models %}
+        <option value="{{ m.id }}" {% if filters.model == m.id|stringformat:"s" %}selected{% endif %}>{{ m.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label small text-subtle">Sesión</label>
+      <select name="session" class="form-select form-select-sm">
+        <option value="">Todas</option>
+        {% for value, label in session_choices %}
+        <option value="{{ value }}" {% if filters.session == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
     <div class="col-6 col-md-2 d-flex gap-2">
       <button type="submit" class="btn btn-outline-cyan btn-sm w-100">
         <i class="bi bi-search me-1"></i>Filtrar
@@ -29,8 +71,8 @@
 
 <div class="card">
   <div class="card-header py-2 d-flex justify-content-between">
-    <span class="text-subtle small">{{ total_trades }} operación{{ total_trades|pluralize:"es" }}</span>
-    <span class="text-subtle small">Página {{ page }} de {{ total_pages }}</span>
+    <span class="text-subtle small">{{ paginator.count }} operación{{ paginator.count|pluralize:"es" }}</span>
+    <span class="text-subtle small">Página {{ page_obj.number }} de {{ paginator.num_pages }}</span>
   </div>
   <div class="table-responsive">
     <table class="table table-striped table-hover mb-0">
@@ -44,32 +86,32 @@
       <tbody>
         {% for t in trades %}
         <tr>
-          <td class="text-subtle small">{{ t.pk }}</td>
-          <td class="text-subtle">{{ t.trade_date }}</td>
+          <td class="text-subtle small">{{ t.trade_id|default:t.pk }}</td>
+          <td class="text-subtle">{{ t.entry_date|date:"d/m/Y" }}</td>
           <td class="text-gold fw-bold">{{ t.symbol }}</td>
-          <td class="{% if t.position == 'Long' %}text-green{% else %}text-red{% endif %} fw-bold small">
-            {% if t.position == 'Long' %}▲{% else %}▼{% endif %} {{ t.position }}
+          <td class="{% if t.position == 'Buy' %}text-green{% else %}text-red{% endif %} fw-bold small">
+            {{ t.position_icon }} {{ t.position }}
           </td>
           <td>
-            <span class="badge badge-{% if t.setup == 'OB' %}ob{% elif t.setup == 'FVG' %}fvg{% else %}mss{% endif %}">
-              {{ t.setup }}
+            <span class="badge badge-{% if t.setup_grade == 'A+' or t.setup_grade == 'A' %}ob{% elif t.setup_grade == 'B' %}fvg{% else %}mss{% endif %}">
+              {{ t.get_setup_grade_display|default:"—" }}
             </span>
           </td>
-          <td class="text-subtle small">{{ t.timeframe }}</td>
+          <td class="text-subtle small">{{ t.get_entry_timeframe_display|default:"—" }}</td>
           <td class="text-cyan small">{% if t.risk_pct %}{{ t.risk_pct }}%{% endif %}</td>
-          <td class="text-cyan small">{% if t.ratio_initial %}{{ t.ratio_initial }}R{% endif %}</td>
-          <td class="fw-bold {% if t.pnl_real %}{% if t.pnl_real > 0 %}text-green{% elif t.pnl_real < 0 %}text-red{% else %}text-orange{% endif %}{% endif %}">
-            {% if t.pnl_real %}${{ t.pnl_real|floatformat:2 }}{% endif %}
+          <td class="text-cyan small">{% if t.actual_rr %}{{ t.actual_rr }}R{% endif %}</td>
+          <td class="fw-bold {% if t.net_pnl %}{% if t.net_pnl > 0 %}text-green{% elif t.net_pnl < 0 %}text-red{% else %}text-orange{% endif %}{% endif %}">
+            {% if t.net_pnl %}${{ t.net_pnl|floatformat:2 }}{% endif %}
           </td>
           <td>
-            <span class="badge {% if t.result == 'W' %}badge-win{% elif t.result == 'L' %}badge-loss{% else %}badge-flat{% endif %}">
-              {{ t.result }}
+            <span class="badge {% if t.is_winner %}badge-win{% elif t.is_loser %}badge-loss{% else %}badge-flat{% endif %}">
+              {% if t.is_winner %}W{% elif t.is_loser %}L{% else %}—{% endif %}
             </span>
           </td>
-          <td class="{% if t.profit_cumul %}{% if t.profit_cumul >= 0 %}text-green{% else %}text-red{% endif %}{% endif %} small">
-            {% if t.profit_cumul %}${{ t.profit_cumul|floatformat:2 }}{% endif %}
+          <td class="{% if t.cumulative_pnl %}{% if t.cumulative_pnl >= 0 %}text-green{% else %}text-red{% endif %}{% endif %} small">
+            {% if t.cumulative_pnl is not None %}${{ t.cumulative_pnl|floatformat:2 }}{% endif %}
           </td>
-          <td class="text-orange small">{{ t.error_type|default:"—" }}</td>
+          <td class="text-orange small">{{ t.get_mistakes_list|join:", "|default:"—" }}</td>
           <td>
             <div class="d-flex gap-1">
               <a href="{% url 'trades:detail' t.pk %}" class="btn btn-sm btn-outline-secondary" title="Ver">
@@ -92,15 +134,15 @@
       </tbody>
     </table>
   </div>
-  {% if total_pages > 1 %}
+  {% if is_paginated %}
   <div class="card-footer d-flex justify-content-center">
     <nav><ul class="pagination pagination-sm mb-0">
-      {% if page > 1 %}
-      <li class="page-item"><a class="page-link" href="?page={{ page|add:"-1" }}">‹</a></li>
+      {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?{{ request.GET.urlencode }}&page={{ page_obj.previous_page_number }}">‹</a></li>
       {% endif %}
-      <li class="page-item active"><span class="page-link">{{ page }}</span></li>
-      {% if page < total_pages %}
-      <li class="page-item"><a class="page-link" href="?page={{ page|add:"1" }}">›</a></li>
+      <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+      {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?{{ request.GET.urlencode }}&page={{ page_obj.next_page_number }}">›</a></li>
       {% endif %}
     </ul></nav>
   </div>

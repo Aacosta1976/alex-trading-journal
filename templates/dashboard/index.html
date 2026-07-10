@@ -162,18 +162,18 @@
       <tbody>
         {% for t in recent_trades %}
         <tr>
-          <td class="text-subtle">{{ t.trade_date }}</td>
+          <td class="text-subtle">{{ t.entry_date|date:"d/m/Y" }}</td>
           <td class="text-gold fw-bold">{{ t.symbol }}</td>
-          <td class="{% if t.position == 'Long' %}text-green{% else %}text-red{% endif %}">
-            {{ t.position }}
+          <td class="{% if t.position == 'Buy' %}text-green{% else %}text-red{% endif %}">
+            {{ t.position|default:"—" }}
           </td>
-          <td><span class="badge badge-{% if t.setup == 'OB' %}ob{% elif t.setup == 'FVG' %}fvg{% else %}mss{% endif %}">{{ t.setup }}</span></td>
-          <td class="text-cyan">{% if t.ratio_initial %}{{ t.ratio_initial }}R{% endif %}</td>
-          <td class="{% if t.pnl_real and t.pnl_real > 0 %}text-green{% elif t.pnl_real and t.pnl_real < 0 %}text-red{% else %}text-orange{% endif %} fw-bold">
-            {% if t.pnl_real %}${{ t.pnl_real|floatformat:2 }}{% endif %}
+          <td><span class="badge badge-{% if t.setup_grade == 'A+' or t.setup_grade == 'A' %}ob{% elif t.setup_grade == 'B' %}fvg{% else %}mss{% endif %}">{{ t.setup_grade|default:"—" }}</span></td>
+          <td class="text-cyan">{% if t.actual_rr %}{{ t.actual_rr }}R{% endif %}</td>
+          <td class="{% if t.net_pnl and t.net_pnl > 0 %}text-green{% elif t.net_pnl and t.net_pnl < 0 %}text-red{% else %}text-orange{% endif %} fw-bold">
+            {% if t.net_pnl %}${{ t.net_pnl|floatformat:2 }}{% endif %}
           </td>
-          <td><span class="badge badge-{{ t.result|lower }}{% if t.result == 'W' %}win{% elif t.result == 'L' %}loss{% else %}flat{% endif %}">{{ t.result }}</span></td>
-          <td class="text-orange small">{{ t.error_type|default:"—" }}</td>
+          <td><span class="badge {% if t.wl == 'W' %}badge-win{% elif t.wl == 'L' %}badge-loss{% else %}badge-flat{% endif %}">{{ t.wl }}</span></td>
+          <td class="text-orange small">{{ t.mistakes|default:"—"|truncatechars:30 }}</td>
         </tr>
         {% empty %}
         <tr><td colspan="8" class="text-center text-subtle py-4">

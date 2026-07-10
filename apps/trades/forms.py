@@ -60,21 +60,29 @@ class TradeForm(forms.ModelForm):
             "mistakes", "notes", "screenshot",
         ]
         widgets = {
-            "entry_date":       forms.DateInput(attrs={"type": "date", "class": "form-control"}),
-            "entry_time":       forms.TimeInput(attrs={"type": "time", "class": "form-control"}),
-            "exit_date":        forms.DateInput(attrs={"type": "date", "class": "form-control"}),
-            "exit_time":        forms.TimeInput(attrs={"type": "time", "class": "form-control"}),
-            "duration_minutes": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
-            "symbol":           forms.TextInput(attrs={"class": "form-control", "placeholder": "EURUSD, USDJPY, US100..."}),
-            "entry_signal":     forms.TextInput(attrs={"class": "form-control", "placeholder": "CSD, MSS, BOS..."}),
-            "risk_pct":         forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0", "max": "10"}),
-            "sl_pips":          forms.NumberInput(attrs={"class": "form-control", "step": "0.1"}),
-            "actual_rr":        forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
-            "max_rr_reached":   forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
-            "gross_pnl":        forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
-            "fees":             forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
-            "net_pnl":          forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
-            "notes":            forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            # NOTA (fix INC-02): format='%Y-%m-%d' / '%H:%M' fuerza el formato ISO que
+            # requiere <input type="date"/"time"> en HTML5. Sin esto, Django renderiza el
+            # valor inicial usando el formato localizado (es-es -> dd/mm/aaaa), que el
+            # navegador no reconoce y deja el campo en blanco al editar un trade existente,
+            # aunque el dato siga correctamente guardado en la base de datos.
+            "entry_date":       forms.DateInput(format='%Y-%m-%d', attrs={"type": "date", "class": "form-control", "autocomplete": "off"}),
+            "entry_time":       forms.TimeInput(format='%H:%M', attrs={"type": "time", "class": "form-control", "autocomplete": "off"}),
+            "exit_date":        forms.DateInput(format='%Y-%m-%d', attrs={"type": "date", "class": "form-control", "autocomplete": "off"}),
+            "exit_time":        forms.TimeInput(format='%H:%M', attrs={"type": "time", "class": "form-control", "autocomplete": "off"}),
+            "duration_minutes": forms.NumberInput(attrs={"class": "form-control", "min": 0, "autocomplete": "off"}),
+            "symbol":           forms.TextInput(attrs={"class": "form-control", "placeholder": "EURUSD, USDJPY, US100...", "autocomplete": "off"}),
+            # NOTA (fix INC-01): autocomplete="off" evita que el navegador reinyecte el
+            # valor introducido en el trade anterior en estos mismos campos de un formulario
+            # "Nuevo Trade" recién cargado.
+            "entry_signal":     forms.TextInput(attrs={"class": "form-control", "placeholder": "CSD, MSS, BOS...", "autocomplete": "off"}),
+            "risk_pct":         forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0", "max": "10", "autocomplete": "off"}),
+            "sl_pips":          forms.NumberInput(attrs={"class": "form-control", "step": "0.1", "autocomplete": "off"}),
+            "actual_rr":        forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "autocomplete": "off"}),
+            "max_rr_reached":   forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "autocomplete": "off"}),
+            "gross_pnl":        forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "autocomplete": "off"}),
+            "fees":             forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "autocomplete": "off"}),
+            "net_pnl":          forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "autocomplete": "off"}),
+            "notes":            forms.Textarea(attrs={"class": "form-control", "rows": 3, "autocomplete": "off"}),
             "is_backtest":      forms.CheckboxInput(attrs={"class": "form-check-input"}),
             # Selects con Bootstrap
             "account":          forms.Select(attrs={"class": "form-select"}),

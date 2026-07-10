@@ -5,8 +5,8 @@
   <h4 class="text-gold mb-0">
     <i class="bi bi-eye me-2"></i>Operación #{{ trade.pk }} —
     <span class="text-cyan">{{ trade.symbol }}</span>
-    <span class="ms-2 badge {% if trade.result == 'W' %}badge-win{% elif trade.result == 'L' %}badge-loss{% else %}badge-flat{% endif %}">
-      {{ trade.result }}
+    <span class="ms-2 badge {% if trade.is_winner %}badge-win{% elif trade.is_loser %}badge-loss{% else %}badge-flat{% endif %}">
+      {% if trade.is_winner %}W{% elif trade.is_loser %}L{% else %}—{% endif %}
     </span>
   </h4>
   <div class="d-flex gap-2">
@@ -25,15 +25,15 @@
     <div class="card h-100">
       <div class="card-header py-2"><span class="text-cyan fw-bold small">IDENTIFICACIÓN & SÍMBOLO</span></div>
       <div class="card-body">
-        {% include "trades/_detail_row.html" with label="Fecha"    value=trade.trade_date %}
-        {% include "trades/_detail_row.html" with label="Hora"     value=trade.trade_time %}
+        {% include "trades/_detail_row.html" with label="Fecha"    value=trade.entry_date %}
+        {% include "trades/_detail_row.html" with label="Hora"     value=trade.entry_time %}
         {% include "trades/_detail_row.html" with label="Sesión"   value=trade.session %}
         {% include "trades/_detail_row.html" with label="Símbolo"  value=trade.symbol color="gold" %}
-        {% include "trades/_detail_row.html" with label="Timeframe"value=trade.timeframe %}
-        {% include "trades/_detail_row.html" with label="Posición" value=trade.position color=trade.position|lower %}
-        {% include "trades/_detail_row.html" with label="Setup"    value=trade.setup color="purple" %}
-        {% include "trades/_detail_row.html" with label="Categoría"value=trade.category %}
-        {% include "trades/_detail_row.html" with label="Noticias" value=trade.news_filter %}
+        {% include "trades/_detail_row.html" with label="Timeframe" value=trade.get_entry_timeframe_display %}
+        {% include "trades/_detail_row.html" with label="Posición" value=trade.position color=trade.position|lower|default:"text" %}
+        {% include "trades/_detail_row.html" with label="Setup"    value=trade.get_setup_grade_display color="purple" %}
+        {% include "trades/_detail_row.html" with label="Bias"     value=trade.get_bias_display %}
+        {% include "trades/_detail_row.html" with label="Noticias" value=trade.get_news_impact_display %}
       </div>
     </div>
   </div>
@@ -43,14 +43,13 @@
       <div class="card-header py-2"><span class="text-green fw-bold small">RIESGO & RESULTADO</span></div>
       <div class="card-body">
         {% include "trades/_detail_row.html" with label="Riesgo %" value=trade.risk_pct color="cyan" %}
-        {% include "trades/_detail_row.html" with label="Pips SL"  value=trade.pips_sl %}
-        {% include "trades/_detail_row.html" with label="Balance"  value=trade.account_balance prefix="$" %}
-        {% include "trades/_detail_row.html" with label="SL ($)"   value=trade.usd_sl prefix="$" color="red" %}
-        {% include "trades/_detail_row.html" with label="Size K"   value=trade.size_k %}
-        {% include "trades/_detail_row.html" with label="R:R Inicial" value=trade.ratio_initial suffix="R" color="cyan" %}
-        {% include "trades/_detail_row.html" with label="R:R Real"    value=trade.ratio_real suffix="R" color="cyan" %}
-        {% include "trades/_detail_row.html" with label="P&L Real"    value=trade.pnl_real prefix="$" color=trade.result|lower %}
-        {% include "trades/_detail_row.html" with label="Profit Acum" value=trade.profit_cumul prefix="$" %}
+        {% include "trades/_detail_row.html" with label="S/L Pips"  value=trade.sl_pips %}
+        {% include "trades/_detail_row.html" with label="Gestión SL"  value=trade.get_sl_management_display %}
+        {% include "trades/_detail_row.html" with label="Fees ($)"   value=trade.fees prefix="$" color="red" %}
+        {% include "trades/_detail_row.html" with label="R:R Conseguido" value=trade.actual_rr suffix="R" color="cyan" %}
+        {% include "trades/_detail_row.html" with label="R:R Máx. alcanzado" value=trade.max_rr_reached suffix="R" color="cyan" %}
+        {% include "trades/_detail_row.html" with label="Gross P&L"    value=trade.gross_pnl prefix="$" %}
+        {% include "trades/_detail_row.html" with label="Net P&L"    value=trade.net_pnl prefix="$" color=trade.outcome_color %}
       </div>
     </div>
   </div>
@@ -61,12 +60,12 @@
       <div class="card-body">
         <div class="row g-3">
           <div class="col-md-4">
-            <small class="text-subtle">Tipo de Error</small>
-            <p class="text-orange mb-0">{{ trade.error_type|default:"—" }}</p>
+            <small class="text-subtle">Errores cometidos</small>
+            <p class="text-orange mb-0">{{ trade.get_mistakes_list|join:", "|default:"—" }}</p>
           </div>
           <div class="col-md-4">
-            <small class="text-subtle">Gestión</small>
-            <p class="text-subtle mb-0">{{ trade.trade_mgmt|default:"—" }}</p>
+            <small class="text-subtle">Gestión del TP</small>
+            <p class="text-subtle mb-0">{{ trade.get_tp_management_list|join:", "|default:"—" }}</p>
           </div>
           <div class="col-md-12">
             <small class="text-subtle">Notas</small>
